@@ -2,11 +2,12 @@ import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { TabViewAnimated, TabViewPagerPan } from 'react-native-tab-view';
 import SafeAreaView from 'react-native-safe-area-view';
-
-import SceneView from '../SceneView';
+import ResourceSavingSceneView from '../ResourceSavingSceneView';
 
 class TabView extends React.PureComponent {
   static defaultProps = {
+    lazy: true,
+    removedClippedSubviews: true,
     // fix for https://github.com/react-native-community/react-native-tab-view/issues/312
     initialLayout: Platform.select({
       android: { width: 1, height: 0 },
@@ -22,14 +23,18 @@ class TabView extends React.PureComponent {
     const { screenProps, descriptors } = this.props;
     const descriptor = descriptors[route.key];
     const TabComponent = descriptor.getComponent();
+
     return (
-      <View style={styles.page}>
-        <SceneView
-          screenProps={screenProps}
-          component={TabComponent}
-          navigation={descriptor.navigation}
-        />
-      </View>
+      <ResourceSavingSceneView
+        lazy={this.props.lazy}
+        removeClippedSubViews={this.props.removeClippedSubviews}
+        animationEnabled={this.props.animationEnabled}
+        swipeEnabled={this.props.swipeEnabled}
+        screenProps={screenProps}
+        component={TabComponent}
+        navigation={this.props.navigation}
+        childNavigation={descriptor.navigation}
+      />
     );
   };
 
@@ -180,10 +185,5 @@ export default TabView;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-
-  page: {
-    flex: 1,
-    overflow: 'hidden',
   },
 });

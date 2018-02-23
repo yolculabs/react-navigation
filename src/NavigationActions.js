@@ -104,6 +104,7 @@ const uri = createAction(URI, payload => ({
 const completeTransition = createAction(COMPLETE_TRANSITION, payload => ({
   type: COMPLETE_TRANSITION,
   key: payload && payload.key,
+  routeKey: payload && payload.routeKey,
 }));
 
 export default {

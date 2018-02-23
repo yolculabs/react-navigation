@@ -24,10 +24,15 @@ class StackView extends React.Component {
         navigation={this.props.navigation}
         descriptors={this.props.descriptors}
         onTransitionStart={this.props.onTransitionStart}
-        onTransitionEnd={(lastTransition, transition) => {
+        onTransitionEnd={(transition, lastTransition) => {
           const { onTransitionEnd, navigation } = this.props;
-          navigation.dispatch(NavigationActions.completeTransition());
-          onTransitionEnd && onTransitionEnd(lastTransition, transition);
+          navigation.dispatch(
+            NavigationActions.completeTransition({
+              key: this.props.navigation.state.key,
+              routeKey: transition.scene.route.key,
+            })
+          );
+          onTransitionEnd && onTransitionEnd(transition, lastTransition);
         }}
       />
     );
@@ -45,14 +50,15 @@ class StackView extends React.Component {
     };
   };
 
-  _render = props => {
+  _render = (transitionProps, prevTransitionProps) => {
     const { screenProps, navigationConfig } = this.props;
     return (
       <StackViewLayout
         {...navigationConfig}
+        transitionProps={transitionProps}
+        prevTransitionProps={prevTransitionProps}
         screenProps={screenProps}
         descriptors={this.props.descriptors}
-        {...props}
       />
     );
   };

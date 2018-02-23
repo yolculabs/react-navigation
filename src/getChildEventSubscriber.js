@@ -66,6 +66,7 @@ export default function getChildEventSubscriber(addListener, key) {
       const focusKey = routes && routes[state.index].key;
 
       const isChildFocused = focusKey === key;
+      const wasChildFocused = lastFocusKey === key;
       const lastRoute =
         lastRoutes && lastRoutes.find(route => route.key === key);
       const newRoute = routes && routes.find(route => route.key === key);
@@ -77,6 +78,7 @@ export default function getChildEventSubscriber(addListener, key) {
         type: eventName,
       };
       const isTransitioning = !!state && state.isTransitioning;
+      const wasTransitioning = !!lastState && lastState.isTransitioning;
 
       const previouslyLastEmittedEvent = lastEmittedEvent;
 
@@ -98,6 +100,9 @@ export default function getChildEventSubscriber(addListener, key) {
           isChildFocused &&
           !isTransitioning
         ) {
+          emit((lastEmittedEvent = 'didFocus'), childPayload);
+        } else if (eventName === 'action' && !isChildFocused) {
+          // The child is not focused, which means we need to immediately fire 'didFocus' and 'willBlur'. If we aren't transitioning, we also should fire `didBlur`
           emit((lastEmittedEvent = 'didFocus'), childPayload);
         }
       }

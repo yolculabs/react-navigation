@@ -86,21 +86,26 @@ class StackViewLayout extends React.Component {
       return header;
     }
 
-    const renderHeader = header || ((props: *) => <Header {...props} />);
+    const renderHeader = header || (props => <Header {...props} />);
     const {
       headerLeftInterpolator,
       headerTitleInterpolator,
       headerRightInterpolator,
     } = this._getTransitionConfig();
 
-    // We need to explicitly exclude `mode` since Flow doesn't see
-    // mode: headerMode override below and reports prop mismatch
-    const { mode, ...passProps } = this.props;
+    const {
+      mode,
+      transitionProps,
+      prevTransitionProps,
+      ...passProps
+    } = this.props;
 
     return renderHeader({
       ...passProps,
+      ...transitionProps,
       scene,
       mode: headerMode,
+      transitionPreset: this._getHeaderTransitionPreset(),
       leftInterpolator: headerLeftInterpolator,
       titleInterpolator: headerTitleInterpolator,
       rightInterpolator: headerRightInterpolator,
@@ -116,22 +121,22 @@ class StackViewLayout extends React.Component {
     // when we'd do that with the current structure we have. `stopAnimation` callback
     // is also broken with native animated values that have no listeners so if we
     // want to remove this we have to fix this too.
-    animatedSubscribeValue(props.layout.width);
-    animatedSubscribeValue(props.layout.height);
-    animatedSubscribeValue(props.position);
+    animatedSubscribeValue(props.transitionProps.layout.width);
+    animatedSubscribeValue(props.transitionProps.layout.height);
+    animatedSubscribeValue(props.transitionProps.position);
   }
 
-  _reset(resetToIndex, duration): void {
-    Animated.timing(this.props.position, {
+  _reset(resetToIndex, duration) {
+    Animated.timing(this.props.transitionProps.position, {
       toValue: resetToIndex,
       duration,
       easing: EaseInOut,
-      useNativeDriver: this.props.position.__isNative,
+      useNativeDriver: this.props.transitionProps.position.__isNative,
     }).start();
   }
 
   _goBack(backFromIndex, duration) {
-    const { navigation, position, scenes } = this.props;
+    const { navigation, position, scenes } = this.props.transitionProps;
     const toValue = Math.max(backFromIndex - 1, 0);
 
     // set temporary index for gesture handler to respect until the action is
@@ -161,16 +166,21 @@ class StackViewLayout extends React.Component {
     let floatingHeader = null;
     const headerMode = this._getHeaderMode();
     if (headerMode === 'float') {
-      floatingHeader = this._renderHeader(this.props.scene, headerMode);
+      floatingHeader = this._renderHeader(
+        this.props.transitionProps.scene,
+        headerMode
+      );
     }
     const {
-      navigation,
-      position,
-      layout,
-      scene,
-      scenes,
+      transitionProps: {
+        navigation,
+        position,
+        layout,
+        scene,
+        scenes,
+        descriptors,
+      },
       mode,
-      descriptors,
     } = this.props;
     const { index } = navigation.state;
     const isVertical = mode === 'modal';
@@ -191,7 +201,7 @@ class StackViewLayout extends React.Component {
             this._reset(index, 0);
           },
           onPanResponderGrant: () => {
-            position.stopAnimation((value: number) => {
+            position.stopAnimation(value => {
               this._isResponding = true;
               this._gestureStartValue = value;
             });
@@ -338,6 +348,21 @@ class StackViewLayout extends React.Component {
     return 'float';
   }
 
+  _getHeaderTransitionPreset() {
+    // On Android or with header mode screen, we always just use in-place,
+    // we ignore the option entirely (at least until we have other presets)
+    if (Platform.OS === 'android' || this._getHeaderMode() === 'screen') {
+      return 'fade-in-place';
+    }
+
+    // TODO: validations: 'fade-in-place' or 'uikit' are valid
+    if (this.props.headerTransitionPreset) {
+      return this.props.headerTransitionPreset;
+    } else {
+      return 'fade-in-place';
+    }
+  }
+
   _renderInnerScene(scene) {
     const { options, navigation, getComponent } = scene.descriptor;
     const SceneComponent = getComponent();
@@ -372,8 +397,8 @@ class StackViewLayout extends React.Component {
 
     return TransitionConfigs.getTransitionConfig(
       this.props.transitionConfig,
-      {},
-      {},
+      this.props.transitionProps,
+      this.props.prevTransitionProps,
       isModal
     );
   };
@@ -381,11 +406,15 @@ class StackViewLayout extends React.Component {
   _renderCard = scene => {
     const { screenInterpolator } = this._getTransitionConfig();
     const style =
-      screenInterpolator && screenInterpolator({ ...this.props, scene });
+      screenInterpolator &&
+      screenInterpolator({ ...this.props.transitionProps, scene });
+
+    const { transitionProps, ...props } = this.props;
 
     return (
       <Card
-        {...this.props}
+        {...props}
+        {...transitionProps}
         key={`card_${scene.key}`}
         style={[style, this.props.cardStyle]}
         scene={scene}

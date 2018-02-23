@@ -14,6 +14,7 @@ describe('TabBarBottom', () => {
     const route = { key: 's1', routeName: 's1' };
     const navigation = {
       state: {
+        key: 'Root',
         index: 0,
         routes: [route],
       },
@@ -31,7 +32,7 @@ describe('TabBarBottom', () => {
               state: route,
               key: route.key,
               options: {},
-              navigation: {},
+              navigation: { state: route, dispatch: () => {} },
               getComponent: () => View,
             },
           }}

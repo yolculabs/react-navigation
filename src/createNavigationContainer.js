@@ -26,6 +26,20 @@ export default function createNavigationContainer(Component) {
       this._validateProps(props);
 
       this._initialAction = NavigationActions.init();
+
+      if (this._isStateful()) {
+        this.subs = BackHandler.addEventListener('hardwareBackPress', () => {
+          if (!this._isMounted) {
+            this.subs && this.subs.remove();
+          } else {
+            // dispatch returns true if the action results in a state change,
+            // and false otherwise. This maps well to what BackHandler expects
+            // from a callback -- true if handled, false if not handled
+            return this.dispatch(NavigationActions.back());
+          }
+        });
+      }
+
       this.state = {
         nav: this._isStateful()
           ? Component.router.getStateForAction(this._initialAction)
@@ -87,8 +101,7 @@ export default function createNavigationContainer(Component) {
     _onNavigationStateChange(prevNav, nav, action) {
       if (
         typeof this.props.onNavigationStateChange === 'undefined' &&
-        this._isStateful() &&
-        !!process.env.REACT_NAV_LOGGING
+        this._isStateful()
       ) {
         /* eslint-disable no-console */
         if (console.group) {
@@ -125,13 +138,10 @@ export default function createNavigationContainer(Component) {
     }
 
     componentDidMount() {
+      this._isMounted = true;
       if (!this._isStateful()) {
         return;
       }
-
-      this.subs = BackHandler.addEventListener('hardwareBackPress', () =>
-        this.dispatch(NavigationActions.back())
-      );
 
       Linking.addEventListener('url', this._handleOpenURL);
 
@@ -148,6 +158,7 @@ export default function createNavigationContainer(Component) {
     }
 
     componentWillUnmount() {
+      this._isMounted = false;
       Linking.removeEventListener('url', this._handleOpenURL);
       this.subs && this.subs.remove();
     }
