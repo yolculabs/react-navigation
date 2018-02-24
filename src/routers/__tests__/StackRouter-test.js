@@ -1506,62 +1506,6 @@ describe('StackRouter', () => {
     }
   });
 
-  test('Maps old actions (uses "Handles the reset action" test)', () => {
-    global.console.warn = jest.fn();
-    const router = StackRouter({
-      Foo: {
-        screen: () => <div />,
-      },
-      Bar: {
-        screen: () => <div />,
-      },
-    });
-    const initAction = NavigationActions.mapDeprecatedActionAndWarn({
-      type: 'Init',
-    });
-    const state = router.getStateForAction(initAction);
-    const resetAction = NavigationActions.mapDeprecatedActionAndWarn({
-      type: 'Reset',
-      actions: [
-        { type: 'Navigate', routeName: 'Foo', params: { bar: '42' } },
-        { type: 'Navigate', routeName: 'Bar' },
-      ],
-      index: 1,
-    });
-    const state2 = router.getStateForAction(resetAction, state);
-    expect(state2 && state2.index).toEqual(1);
-    expect(state2 && state2.routes[0].params).toEqual({ bar: '42' });
-    expect(state2 && state2.routes[0].routeName).toEqual('Foo');
-    expect(state2 && state2.routes[1].routeName).toEqual('Bar');
-    expect(console.warn).toBeCalledWith(
-      expect.stringContaining(
-        "The action type 'Init' has been renamed to 'Navigation/INIT'"
-      )
-    );
-  });
-
-  test('URI encoded string get passed to deep link', () => {
-    const uri = 'people/2018%2F02%2F07';
-    const action = TestStackRouter.getActionForPathAndParams(uri);
-    expect(action).toEqual({
-      routeName: 'person',
-      params: {
-        id: '2018/02/07',
-      },
-      type: NavigationActions.NAVIGATE,
-    });
-
-    const malformedUri = 'people/%E0%A4%A';
-    const action2 = TestStackRouter.getActionForPathAndParams(malformedUri);
-    expect(action2).toEqual({
-      routeName: 'person',
-      params: {
-        id: '%E0%A4%A',
-      },
-      type: NavigationActions.NAVIGATE,
-    });
-  });
-
   test('Querystring params get passed to nested deep link', () => {
     // uri with two non-empty query param values
     const uri = 'main/p/4/list/10259959195?code=test&foo=bar';

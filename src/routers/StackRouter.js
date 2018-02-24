@@ -351,6 +351,8 @@ export default (routeConfigs, stackConfig = {}) => {
       if (
         action.type === NavigationActions.COMPLETE_TRANSITION &&
         (action.key == null || action.key === state.key) &&
+        (action.routeKey == null ||
+          action.routeKey === state.routes[state.index].key) &&
         state.isTransitioning
       ) {
         return {

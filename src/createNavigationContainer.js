@@ -101,8 +101,7 @@ export default function createNavigationContainer(Component) {
     _onNavigationStateChange(prevNav, nav, action) {
       if (
         typeof this.props.onNavigationStateChange === 'undefined' &&
-        this._isStateful() &&
-        !!process.env.REACT_NAV_LOGGING
+        this._isStateful()
       ) {
         /* eslint-disable no-console */
         if (console.group) {
@@ -166,8 +165,7 @@ export default function createNavigationContainer(Component) {
 
     // Per-tick temporary storage for state.nav
 
-    dispatch = inputAction => {
-      const action = NavigationActions.mapDeprecatedActionAndWarn(inputAction);
+    dispatch = action => {
       if (!this._isStateful()) {
         return false;
       }
