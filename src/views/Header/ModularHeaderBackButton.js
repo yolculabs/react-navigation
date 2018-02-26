@@ -1,21 +1,11 @@
 import React from 'react';
-import {
-  I18nManager,
-  Image,
-  Text,
-  View,
-  Platform,
-  StyleSheet,
-} from 'react-native';
+import { I18nManager, Image, Text, View, StyleSheet } from 'react-native';
 
 import TouchableItem from '../TouchableItem';
 
-class HeaderBackButton extends React.PureComponent {
+class ModularHeaderBackButton extends React.PureComponent {
   static defaultProps = {
-    pressColorAndroid: 'rgba(0, 0, 0, .32)',
-    tintColor: Platform.select({
-      ios: '#037aff',
-    }),
+    tintColor: '#037aff',
     truncatedTitle: 'Back',
     // eslint-disable-next-line global-require
     buttonImage: require('../assets/back-icon.png'),
@@ -36,7 +26,6 @@ class HeaderBackButton extends React.PureComponent {
     const {
       buttonImage,
       onPress,
-      pressColorAndroid,
       width,
       title,
       titleStyle,
@@ -49,7 +38,15 @@ class HeaderBackButton extends React.PureComponent {
         ? this.state.initialTextWidth > width
         : false;
 
-    const backButtonTitle = renderTruncated ? truncatedTitle : title;
+    let backButtonTitle = renderTruncated ? truncatedTitle : title;
+
+    // TODO: When we've sorted out measuring in the header, let's revisit this.
+    // This is clearly a bad workaround.
+    if (backButtonTitle && backButtonTitle.length > 8) {
+      backButtonTitle = truncatedTitle;
+    }
+
+    const { ButtonContainerComponent, LabelContainerComponent } = this.props;
 
     return (
       <TouchableItem
@@ -59,21 +56,22 @@ class HeaderBackButton extends React.PureComponent {
         testID="header-back"
         delayPressIn={0}
         onPress={onPress}
-        pressColor={pressColorAndroid}
         style={styles.container}
         borderless
       >
         <View style={styles.container}>
-          <Image
-            style={[
-              styles.icon,
-              !!title && styles.iconWithTitle,
-              !!tintColor && { tintColor },
-            ]}
-            source={buttonImage}
-          />
-          {Platform.OS === 'ios' &&
-            typeof backButtonTitle === 'string' && (
+          <ButtonContainerComponent>
+            <Image
+              style={[
+                styles.icon,
+                !!title && styles.iconWithTitle,
+                !!tintColor && { tintColor },
+              ]}
+              source={buttonImage}
+            />
+          </ButtonContainerComponent>
+          {typeof backButtonTitle === 'string' && (
+            <LabelContainerComponent>
               <Text
                 onLayout={this._onTextLayout}
                 style={[
@@ -85,7 +83,8 @@ class HeaderBackButton extends React.PureComponent {
               >
                 {backButtonTitle}
               </Text>
-            )}
+            </LabelContainerComponent>
+          )}
         </View>
       </TouchableItem>
     );
@@ -102,30 +101,18 @@ const styles = StyleSheet.create({
     fontSize: 17,
     paddingRight: 10,
   },
-  icon:
-    Platform.OS === 'ios'
-      ? {
-          height: 21,
-          width: 13,
-          marginLeft: 9,
-          marginRight: 22,
-          marginVertical: 12,
-          resizeMode: 'contain',
-          transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }],
-        }
-      : {
-          height: 24,
-          width: 24,
-          margin: 16,
-          resizeMode: 'contain',
-          transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }],
-        },
-  iconWithTitle:
-    Platform.OS === 'ios'
-      ? {
-          marginRight: 6,
-        }
-      : {},
+  icon: {
+    height: 21,
+    width: 12,
+    marginLeft: 9,
+    marginRight: 22,
+    marginVertical: 12,
+    resizeMode: 'contain',
+    transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }],
+  },
+  iconWithTitle: {
+    marginRight: 3,
+  },
 });
 
-export default HeaderBackButton;
+export default ModularHeaderBackButton;
