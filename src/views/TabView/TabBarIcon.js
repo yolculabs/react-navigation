@@ -1,7 +1,27 @@
-import React from 'react';
+/* @flow */
+
+import * as React from 'react';
 import { Animated, View, StyleSheet } from 'react-native';
 
-export default class TabBarIcon extends React.PureComponent {
+import type {
+  NavigationState,
+  NavigationScreenProp,
+  ViewStyleProp,
+} from '../../TypeDefinition';
+
+import type { TabScene } from './TabView';
+
+type Props = {
+  activeTintColor: string,
+  inactiveTintColor: string,
+  scene: TabScene,
+  position: Animated.Value,
+  navigation: NavigationScreenProp<NavigationState>,
+  renderIcon: (scene: TabScene) => React.Node,
+  style?: ViewStyleProp,
+};
+
+export default class TabBarIcon extends React.PureComponent<Props> {
   render() {
     const {
       position,
@@ -14,14 +34,14 @@ export default class TabBarIcon extends React.PureComponent {
     const { route, index } = scene;
     const { routes } = navigation.state;
     // Prepend '-1', so there are always at least 2 items in inputRange
-    const inputRange = [-1, ...routes.map((x, i) => i)];
+    const inputRange = [-1, ...routes.map((x: *, i: number) => i)];
     const activeOpacity = position.interpolate({
       inputRange,
-      outputRange: inputRange.map(i => (i === index ? 1 : 0)),
+      outputRange: inputRange.map((i: number) => (i === index ? 1 : 0)),
     });
     const inactiveOpacity = position.interpolate({
       inputRange,
-      outputRange: inputRange.map(i => (i === index ? 0 : 1)),
+      outputRange: inputRange.map((i: number) => (i === index ? 0 : 1)),
     });
     // We render the icon twice at the same position on top of each other:
     // active and inactive one, so we can fade between them.

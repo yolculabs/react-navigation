@@ -1,3 +1,5 @@
+/* @flow */
+
 import invariant from '../utils/invariant';
 import getScreenForRouteName from './getScreenForRouteName';
 import createConfigGetter from './createConfigGetter';
@@ -6,69 +8,78 @@ import NavigationActions from '../NavigationActions';
 import validateRouteConfigMap from './validateRouteConfigMap';
 import getScreenConfigDeprecated from './getScreenConfigDeprecated';
 
-function childrenUpdateWithoutSwitchingIndex(actionType) {
-  return [
-    NavigationActions.SET_PARAMS,
-    NavigationActions.COMPLETE_TRANSITION,
-  ].includes(actionType);
-}
+import type {
+  NavigationComponent,
+  NavigationState,
+  NavigationRouteConfigMap,
+  NavigationParams,
+  NavigationRouter,
+  NavigationRoute,
+  NavigationNavigateAction,
+  NavigationTabRouterConfig,
+  NavigationTabAction,
+  NavigationStateRoute,
+} from '../TypeDefinition';
 
-export default (routeConfigs, config = {}) => {
+export default (
+  routeConfigs: NavigationRouteConfigMap,
+  config: NavigationTabRouterConfig = {}
+): NavigationRouter<NavigationState, NavigationTabAction, *> => {
   // Fail fast on invalid route definitions
   validateRouteConfigMap(routeConfigs);
 
   const order = config.order || Object.keys(routeConfigs);
   const paths = config.paths || {};
-  const initialRouteParams = config.initialRouteParams;
   const initialRouteName = config.initialRouteName || order[0];
   const initialRouteIndex = order.indexOf(initialRouteName);
   const backBehavior = config.backBehavior || 'initialRoute';
   const shouldBackNavigateToInitialRoute = backBehavior === 'initialRoute';
   const tabRouters = {};
-  order.forEach(routeName => {
+  order.forEach((routeName: string) => {
     const routeConfig = routeConfigs[routeName];
     paths[routeName] =
       typeof routeConfig.path === 'string' ? routeConfig.path : routeName;
     tabRouters[routeName] = null;
-    const screen = getScreenForRouteName(routeConfigs, routeName);
-    if (screen.router) {
-      tabRouters[routeName] = screen.router;
+    if (routeConfig.screen && routeConfig.screen.router) {
+      tabRouters[routeName] = routeConfig.screen.router;
     }
   });
   if (initialRouteIndex === -1) {
     throw new Error(
       `Invalid initialRouteName '${initialRouteName}' for TabRouter. ` +
-        `Should be one of ${order.map(n => `"${n}"`).join(', ')}`
+        `Should be one of ${order.map((n: *) => `"${n}"`).join(', ')}`
     );
   }
   return {
-    getStateForAction(action, inputState) {
+    getStateForAction(
+      action: NavigationTabAction,
+      inputState?: ?NavigationState
+    ): ?NavigationState {
       // Establish a default state
       let state = inputState;
       if (!state) {
-        const routes = order.map(routeName => {
-          const params =
-            routeName === initialRouteName ? initialRouteParams : undefined;
+        const routes = order.map((routeName: string) => {
           const tabRouter = tabRouters[routeName];
           if (tabRouter) {
-            const childAction = NavigationActions.init();
+            const childAction =
+              action.action ||
+              NavigationActions.init({
+                ...(action.params ? { params: action.params } : {}),
+              });
             return {
               ...tabRouter.getStateForAction(childAction),
               key: routeName,
               routeName,
-              params,
             };
           }
           return {
             key: routeName,
             routeName,
-            params,
           };
         });
         state = {
           routes,
           index: initialRouteIndex,
-          isTransitioning: false,
         };
         // console.log(`${order.join('-')}: Initial state`, {state});
       }
@@ -77,16 +88,16 @@ export default (routeConfigs, config = {}) => {
         // Merge any params from the action into all the child routes
         const { params } = action;
         if (params) {
-          state.routes = state.routes.map(route => ({
-            ...route,
-            params: {
-              ...route.params,
-              ...params,
-              ...(route.routeName === initialRouteName
-                ? initialRouteParams
-                : null),
-            },
-          }));
+          state.routes = state.routes.map(
+            (route: *) =>
+              ({
+                ...route,
+                params: {
+                  ...route.params,
+                  ...params,
+                },
+              }: NavigationRoute)
+          );
         }
       }
 
@@ -95,7 +106,7 @@ export default (routeConfigs, config = {}) => {
       const activeTabRouter = tabRouters[order[state.index]];
       if (activeTabRouter) {
         const activeTabState = activeTabRouter.getStateForAction(
-          action,
+          action.action || action,
           activeTabLastState
         );
         if (!activeTabState && inputState) {
@@ -116,17 +127,17 @@ export default (routeConfigs, config = {}) => {
       let activeTabIndex = state.index;
       const isBackEligible =
         action.key == null || action.key === activeTabLastState.key;
-      if (action.type === NavigationActions.BACK) {
-        if (isBackEligible && shouldBackNavigateToInitialRoute) {
-          activeTabIndex = initialRouteIndex;
-        } else {
-          return state;
-        }
+      if (
+        action.type === NavigationActions.BACK &&
+        isBackEligible &&
+        shouldBackNavigateToInitialRoute
+      ) {
+        activeTabIndex = initialRouteIndex;
       }
       let didNavigate = false;
       if (action.type === NavigationActions.NAVIGATE) {
-        const navigateAction = action;
-        didNavigate = !!order.find((tabId, i) => {
+        const navigateAction = ((action: *): NavigationNavigateAction);
+        didNavigate = !!order.find((tabId: string, i: number) => {
           if (tabId === navigateAction.routeName) {
             activeTabIndex = i;
             return true;
@@ -166,17 +177,19 @@ export default (routeConfigs, config = {}) => {
       }
       if (action.type === NavigationActions.SET_PARAMS) {
         const key = action.key;
-        const lastRoute = state.routes.find(route => route.key === key);
+        const lastRoute = state.routes.find(
+          (route: NavigationRoute) => route.key === key
+        );
         if (lastRoute) {
           const params = {
             ...lastRoute.params,
             ...action.params,
           };
           const routes = [...state.routes];
-          routes[state.routes.indexOf(lastRoute)] = {
+          routes[state.routes.indexOf(lastRoute)] = ({
             ...lastRoute,
             params,
-          };
+          }: NavigationRoute);
           return {
             ...state,
             routes,
@@ -196,8 +209,9 @@ export default (routeConfigs, config = {}) => {
 
       // Let other tabs handle it and switch to the first tab that returns a new state
       let index = state.index;
-      let routes = state.routes;
-      order.find((tabId, i) => {
+      /* $FlowFixMe */
+      let routes: Array<NavigationState> = state.routes;
+      order.find((tabId: string, i: number) => {
         const tabRouter = tabRouters[tabId];
         if (i === index) {
           return false;
@@ -221,13 +235,9 @@ export default (routeConfigs, config = {}) => {
       });
       // console.log(`${order.join('-')}: Processed other tabs:`, {lastIndex: state.index, index});
 
-      // Nested routers can be updated after switching tabs with actions such as SET_PARAMS
-      // and COMPLETE_TRANSITION.
-      // NOTE: This may be problematic with custom routers because we whitelist the actions
-      // that can be handled by child routers without automatically changing index.
-      if (childrenUpdateWithoutSwitchingIndex(action.type)) {
-        index = state.index;
-      }
+      // keep active tab index if action type is SET_PARAMS
+      index =
+        action.type === NavigationActions.SET_PARAMS ? state.index : index;
 
       if (index !== state.index || routes !== state.routes) {
         return {
@@ -239,8 +249,8 @@ export default (routeConfigs, config = {}) => {
       return state;
     },
 
-    getComponentForState(state) {
-      const routeName = state.routes[state.index].routeName;
+    getComponentForState(state: NavigationState): NavigationComponent {
+      const routeName = order[state.index];
       invariant(
         routeName,
         `There is no route defined for index ${state.index}. Check that
@@ -253,11 +263,11 @@ export default (routeConfigs, config = {}) => {
       return getScreenForRouteName(routeConfigs, routeName);
     },
 
-    getComponentForRouteName(routeName) {
+    getComponentForRouteName(routeName: string): NavigationComponent {
       return getScreenForRouteName(routeConfigs, routeName);
     },
 
-    getPathAndParamsForState(state) {
+    getPathAndParamsForState(state: NavigationState) {
       const route = state.routes[state.index];
       const routeName = order[state.index];
       const subPath = paths[routeName];
@@ -265,7 +275,8 @@ export default (routeConfigs, config = {}) => {
       let path = subPath;
       let params = route.params;
       if (screen && screen.router) {
-        const stateRoute = route;
+        // $FlowFixMe there's no way type the specific shape of the nav state
+        const stateRoute: NavigationStateRoute = route;
         // If it has a router it's a navigator.
         // If it doesn't have router it's an ordinary React component.
         const child = screen.router.getPathAndParamsForState(stateRoute);
@@ -283,17 +294,22 @@ export default (routeConfigs, config = {}) => {
      *
      * This will return null if there is no action matched
      */
-    getActionForPathAndParams(path, params) {
+    getActionForPathAndParams(
+      path: string,
+      params: ?NavigationParams
+    ): ?NavigationTabAction {
       return (
         order
-          .map(tabId => {
+          .map((tabId: string) => {
             const parts = path.split('/');
             const pathToTest = paths[tabId];
             if (parts[0] === pathToTest) {
               const tabRouter = tabRouters[tabId];
-              const action = NavigationActions.navigate({
-                routeName: tabId,
-              });
+              const action: NavigationNavigateAction = NavigationActions.navigate(
+                {
+                  routeName: tabId,
+                }
+              );
               if (tabRouter && tabRouter.getActionForPathAndParams) {
                 action.action = tabRouter.getActionForPathAndParams(
                   parts.slice(1).join('/'),
@@ -306,15 +322,15 @@ export default (routeConfigs, config = {}) => {
             }
             return null;
           })
-          .find(action => !!action) ||
+          .find((action: *) => !!action) ||
         order
-          .map(tabId => {
+          .map((tabId: string) => {
             const tabRouter = tabRouters[tabId];
             return (
               tabRouter && tabRouter.getActionForPathAndParams(path, params)
             );
           })
-          .find(action => !!action) ||
+          .find((action: *) => !!action) ||
         null
       );
     },

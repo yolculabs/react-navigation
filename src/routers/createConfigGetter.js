@@ -1,11 +1,27 @@
+/*
+ * @flow
+ */
+
 import invariant from '../utils/invariant';
 
 import getScreenForRouteName from './getScreenForRouteName';
 import addNavigationHelpers from '../addNavigationHelpers';
 import validateScreenOptions from './validateScreenOptions';
-import getChildEventSubscriber from '../getChildEventSubscriber';
 
-function applyConfig(configurer, navigationOptions, configProps) {
+import type {
+  NavigationScreenProp,
+  NavigationRoute,
+  NavigationStateRoute,
+  NavigationRouteConfigMap,
+  NavigationScreenConfig,
+  NavigationScreenConfigProps,
+} from '../TypeDefinition';
+
+function applyConfig<T: {}>(
+  configurer: ?NavigationScreenConfig<T>,
+  navigationOptions: any,
+  configProps: NavigationScreenConfigProps
+): * {
   if (typeof configurer === 'function') {
     return {
       ...navigationOptions,
@@ -24,10 +40,10 @@ function applyConfig(configurer, navigationOptions, configProps) {
   return navigationOptions;
 }
 
-export default (routeConfigs, navigatorScreenConfig) => (
-  navigation,
-  screenProps
-) => {
+export default (
+  routeConfigs: NavigationRouteConfigMap,
+  navigatorScreenConfig?: NavigationScreenConfig<*>
+) => (navigation: NavigationScreenProp<NavigationRoute>, screenProps: *) => {
   const { state, dispatch } = navigation;
   const route = state;
 
@@ -42,7 +58,8 @@ export default (routeConfigs, navigatorScreenConfig) => (
 
   const router = Component.router;
   if (router) {
-    const { routes, index } = route;
+    // $FlowFixMe
+    const { routes, index } = (route: NavigationStateRoute);
     if (!route || !routes || index == null) {
       throw new Error(
         `Expect nav state to have routes and index, ${JSON.stringify(route)}`
@@ -52,10 +69,6 @@ export default (routeConfigs, navigatorScreenConfig) => (
     const childNavigation = addNavigationHelpers({
       state: childRoute,
       dispatch,
-      addListener: getChildEventSubscriber(
-        navigation.addListener,
-        childRoute.key
-      ),
     });
     outputConfig = router.getScreenOptions(childNavigation, screenProps);
   }

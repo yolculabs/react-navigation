@@ -1,89 +1,73 @@
-/* Helpers for navigation */
+/**
+ * @flow
+ *
+ * Helpers for navigation.
+ */
+
+import type {
+    NavigationProp,
+    NavigationParams,
+    NavigationScreenProp,
+    NavigationNavigateAction,
+} from './TypeDefinition';
 
 import NavigationActions from './NavigationActions';
 import invariant from './utils/invariant';
 
-export default function(navigation) {
-  return {
-    ...navigation,
-    goBack: key => {
-      let actualizedKey = key;
-      if (key === undefined && navigation.state.key) {
-        invariant(
-          typeof navigation.state.key === 'string',
-          'key should be a string'
-        );
-        actualizedKey = navigation.state.key;
-      }
-      return navigation.dispatch(
-        NavigationActions.back({ key: actualizedKey })
-      );
-    },
-    navigate: (navigateTo, params, action) => {
-      if (typeof navigateTo === 'string') {
-        return navigation.dispatch(
-          NavigationActions.navigate({ routeName: navigateTo, params, action })
-        );
-      }
-      invariant(
-        typeof navigateTo === 'object',
-        'Must navigateTo an object or a string'
-      );
-      invariant(
-        params == null,
-        'Params must not be provided to .navigate() when specifying an object'
-      );
-      invariant(
-        action == null,
-        'Child action must not be provided to .navigate() when specifying an object'
-      );
-      return navigation.dispatch(NavigationActions.navigate(navigateTo));
-    },
-    pop: (n, params) =>
-      navigation.dispatch(
-        NavigationActions.pop({ n, immediate: params && params.immediate })
-      ),
-    popToTop: params =>
-      navigation.dispatch(
-        NavigationActions.popToTop({ immediate: params && params.immediate })
-      ),
-    /**
-     * For updating current route params. For example the nav bar title and
-     * buttons are based on the route params.
-     * This means `setParams` can be used to update nav bar for example.
-     */
-    setParams: params => {
-      invariant(
-        navigation.state.key && typeof navigation.state.key === 'string',
-        'setParams cannot be called by root navigator'
-      );
-      const key = navigation.state.key;
-      return navigation.dispatch(NavigationActions.setParams({ params, key }));
-    },
+export default function <S: {}>(navigation: NavigationProp<S>): NavigationScreenProp<S> {
 
-    getParam: (paramName, defaultValue) => {
-      const params = navigation.state.params;
+    let debounce;
+    return {
+        ...navigation,
+        goBack: (key?: ?string): boolean => {
+            let actualizedKey: ?string = key;
+            if (key === undefined && navigation.state.key) {
+                invariant(
+                    typeof navigation.state.key === 'string',
+                    'key should be a string'
+                );
+                actualizedKey = navigation.state.key;
+            }
+            return navigation.dispatch(
+                NavigationActions.back({key: actualizedKey})
+            );
+        },
+        navigate: (routeName: string,
+                   params?: NavigationParams,
+                   action?: NavigationNavigateAction): boolean =>
+            navigation.dispatch(
+                NavigationActions.navigate({routeName, params, action})
+            ),
+        navigateWithDebounce: (routeName: string,
+                               params?: NavigationParams,
+                               action?: NavigationNavigateAction): boolean => {
 
-      if (params && paramName in params) {
-        return params[paramName];
-      }
+                if (debounce) {
+                    return;
+                }
 
-      return defaultValue;
-    },
+                navigation.dispatch(NavigationActions.navigate({
+                    routeName,
+                    params,
+                    action
+                }));
 
-    push: (routeName, params, action) =>
-      navigation.dispatch(
-        NavigationActions.push({ routeName, params, action })
-      ),
-
-    replace: (routeName, params, action) =>
-      navigation.dispatch(
-        NavigationActions.replace({
-          routeName,
-          params,
-          action,
-          key: navigation.state.key,
-        })
-      ),
-  };
+                debounce = setTimeout(() => {
+                    debounce = 0;
+                }, 1000)
+        },
+        /**
+         * For updating current route params. For example the nav bar title and
+         * buttons are based on the route params.
+         * This means `setParams` can be used to update nav bar for example.
+         */
+        setParams: (params: NavigationParams): boolean => {
+            invariant(
+                navigation.state.key && typeof navigation.state.key === 'string',
+                'setParams cannot be called by root navigator'
+            );
+            const key = navigation.state.key;
+            return navigation.dispatch(NavigationActions.setParams({params, key}));
+        },
+    };
 }

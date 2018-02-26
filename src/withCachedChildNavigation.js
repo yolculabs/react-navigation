@@ -1,29 +1,55 @@
-import React from 'react';
+/* @flow */
+
+import * as React from 'react';
+
 import addNavigationHelpers from './addNavigationHelpers';
-import getChildEventSubscriber from './getChildEventSubscriber';
+
+import type {
+  NavigationScreenProp,
+  NavigationState,
+  NavigationRoute,
+} from './TypeDefinition';
+
+type InputProps = {
+  +navigation: NavigationScreenProp<NavigationState>,
+};
+type OutputProps = {
+  childNavigationProps: {
+    +[key: string]: NavigationScreenProp<NavigationRoute>,
+  },
+};
 
 /**
  * HOC which caches the child navigation items.
  */
-export default function withCachedChildNavigation(Comp) {
-  const displayName = Comp.displayName || Comp.name;
-  return class extends React.PureComponent {
+export default function withCachedChildNavigation<T: InputProps>(
+  Comp: React.ComponentType<OutputProps & T>
+): React.ComponentType<T> {
+  // $FlowFixMe StatelessFunctionalComponent missing displayName Flow < 0.54.0
+  const displayName: string = Comp.displayName || Comp.name;
+  return class extends React.PureComponent<T> {
     static displayName = `withCachedChildNavigation(${displayName})`;
 
     componentWillMount() {
       this._updateNavigationProps(this.props.navigation);
     }
 
-    componentWillReceiveProps(nextProps) {
+    componentWillReceiveProps(nextProps: T) {
       this._updateNavigationProps(nextProps.navigation);
     }
 
-    _updateNavigationProps = navigation => {
+    _childNavigationProps: {
+      [key: string]: NavigationScreenProp<NavigationRoute>,
+    };
+
+    _updateNavigationProps = (
+      navigation: NavigationScreenProp<NavigationState>
+    ) => {
       // Update props for each child route
       if (!this._childNavigationProps) {
         this._childNavigationProps = {};
       }
-      navigation.state.routes.forEach(route => {
+      navigation.state.routes.forEach((route: *) => {
         const childNavigation = this._childNavigationProps[route.key];
         if (childNavigation && childNavigation.state === route) {
           return;
@@ -31,10 +57,6 @@ export default function withCachedChildNavigation(Comp) {
         this._childNavigationProps[route.key] = addNavigationHelpers({
           dispatch: navigation.dispatch,
           state: route,
-          addListener: getChildEventSubscriber(
-            navigation.addListener,
-            route.key
-          ),
         });
       });
     };

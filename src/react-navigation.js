@@ -1,3 +1,7 @@
+/*
+ * @flow
+ */
+
 /* eslint global-require: 0 */
 
 module.exports = {
@@ -51,7 +55,7 @@ module.exports = {
     return require('./views/CardStack/Card').default;
   },
   get SafeAreaView() {
-    return require('react-native-safe-area-view').default;
+    return require('./views/SafeAreaView').default;
   },
 
   // Header
@@ -87,8 +91,5 @@ module.exports = {
   // HOCs
   get withNavigation() {
     return require('./views/withNavigation').default;
-  },
-  get withNavigationFocus() {
-    return require('./views/withNavigationFocus').default;
   },
 };

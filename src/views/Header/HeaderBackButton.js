@@ -1,4 +1,6 @@
-import React from 'react';
+/* @flow */
+
+import * as React from 'react';
 import {
   I18nManager,
   Image,
@@ -8,22 +10,36 @@ import {
   StyleSheet,
 } from 'react-native';
 
+import type { LayoutEvent, TextStyleProp } from '../../TypeDefinition';
+
 import TouchableItem from '../TouchableItem';
 
-class HeaderBackButton extends React.PureComponent {
+type Props = {
+  onPress?: () => void,
+  pressColorAndroid?: string,
+  title?: ?string,
+  titleStyle?: ?TextStyleProp,
+  tintColor?: ?string,
+  truncatedTitle?: ?string,
+  width?: ?number,
+};
+
+type State = {
+  initialTextWidth?: number,
+};
+
+class HeaderBackButton extends React.PureComponent<Props, State> {
   static defaultProps = {
     pressColorAndroid: 'rgba(0, 0, 0, .32)',
     tintColor: Platform.select({
       ios: '#037aff',
     }),
     truncatedTitle: 'Back',
-    // eslint-disable-next-line global-require
-    buttonImage: require('../assets/back-icon.png'),
   };
 
   state = {};
 
-  _onTextLayout = e => {
+  _onTextLayout = (e: LayoutEvent) => {
     if (this.state.initialTextWidth) {
       return;
     }
@@ -34,7 +50,6 @@ class HeaderBackButton extends React.PureComponent {
 
   render() {
     const {
-      buttonImage,
       onPress,
       pressColorAndroid,
       width,
@@ -50,6 +65,9 @@ class HeaderBackButton extends React.PureComponent {
         : false;
 
     const backButtonTitle = renderTruncated ? truncatedTitle : title;
+
+    // eslint-disable-next-line global-require
+    const asset = require('../assets/back-icon.png');
 
     return (
       <TouchableItem
@@ -70,10 +88,10 @@ class HeaderBackButton extends React.PureComponent {
               !!title && styles.iconWithTitle,
               !!tintColor && { tintColor },
             ]}
-            source={buttonImage}
+            source={asset}
           />
           {Platform.OS === 'ios' &&
-            typeof backButtonTitle === 'string' && (
+            title && (
               <Text
                 onLayout={this._onTextLayout}
                 style={[
@@ -107,7 +125,7 @@ const styles = StyleSheet.create({
       ? {
           height: 21,
           width: 13,
-          marginLeft: 9,
+          marginLeft: 10,
           marginRight: 22,
           marginVertical: 12,
           resizeMode: 'contain',
@@ -123,7 +141,7 @@ const styles = StyleSheet.create({
   iconWithTitle:
     Platform.OS === 'ios'
       ? {
-          marginRight: 6,
+          marginRight: 5,
         }
       : {},
 });

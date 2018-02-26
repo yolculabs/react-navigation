@@ -1,21 +1,26 @@
+/* @flow */
+
 import React from 'react';
 import createNavigationContainer from '../createNavigationContainer';
 import createNavigator from './createNavigator';
 import CardStackTransitioner from '../views/CardStack/CardStackTransitioner';
 import StackRouter from '../routers/StackRouter';
-import NavigationActions from '../NavigationActions';
+import NavigatorTypes from './NavigatorTypes';
 
-// A stack navigators props are the intersection between
-// the base navigator props (navgiation, screenProps, etc)
-// and the view's props
+import type {
+  NavigationRouteConfigMap,
+  StackNavigatorConfig,
+} from '../TypeDefinition';
 
-export default (routeConfigMap, stackConfig = {}) => {
+export default (
+  routeConfigMap: NavigationRouteConfigMap,
+  stackConfig: StackNavigatorConfig = {}
+) => {
   const {
     initialRouteName,
     initialRouteParams,
     paths,
     headerMode,
-    headerTransitionPreset,
     mode,
     cardStyle,
     transitionConfig,
@@ -34,24 +39,22 @@ export default (routeConfigMap, stackConfig = {}) => {
   const router = StackRouter(routeConfigMap, stackRouterConfig);
 
   // Create a navigator with CardStackTransitioner as the view
-  const navigator = createNavigator(router, routeConfigMap, stackConfig)(
-    props => (
-      <CardStackTransitioner
-        {...props}
-        headerMode={headerMode}
-        headerTransitionPreset={headerTransitionPreset}
-        mode={mode}
-        cardStyle={cardStyle}
-        transitionConfig={transitionConfig}
-        onTransitionStart={onTransitionStart}
-        onTransitionEnd={(lastTransition, transition) => {
-          const { state, dispatch } = props.navigation;
-          dispatch(NavigationActions.completeTransition({ key: state.key }));
-          onTransitionEnd && onTransitionEnd();
-        }}
-      />
-    )
-  );
+  const navigator = createNavigator(
+    router,
+    routeConfigMap,
+    stackConfig,
+    NavigatorTypes.STACK
+  )((props: *) => (
+    <CardStackTransitioner
+      {...props}
+      headerMode={headerMode}
+      mode={mode}
+      cardStyle={cardStyle}
+      transitionConfig={transitionConfig}
+      onTransitionStart={onTransitionStart}
+      onTransitionEnd={onTransitionEnd}
+    />
+  ));
 
   return createNavigationContainer(navigator);
 };
